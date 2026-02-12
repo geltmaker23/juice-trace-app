@@ -9,44 +9,117 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
+const htmlPage = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Juice Trace</title>
+  <style>
+    body {
+      font-family: Arial;
+      padding: 40px;
+      background: #f5f5f5;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px 0;
+      width: 300px;
+      font-size: 16px;
+    }
+    button { cursor: pointer; }
+    #results {
+      margin-top: 20px;
+      padding: 20px;
+      background: white;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Juice Trace System</h1>
+
+  <input type="text" id="product" placeholder="Product (Example: Orange Juice)">
+  <br>
+  <input type="text" id="code" placeholder="Code (Example: L1T5 2/26/26)">
+  <br>
+  <button onclick="trace()">Trace</button>
+
+  <div id="results"></div>
+
+  <script>
+    async function trace() {
+      const product = document.getElementById("product").value;
+      const code = document.getElementById("code").value;
+
+      const response = await fetch(
+        '/trace?product=' + encodeURIComponent(product) +
+        '&code=' + encodeURIComponent(code)
+      );
+
+      const data = await response.json();
+
+      const resultsDiv = document.getElementById("results");
+
+      if (data.length === 0) {
+        resultsDiv.innerHTML = "<strong>No results found.</strong>";
+        return;
+      }
+
+      let html = "<h3>Trace Results:</h3>";
+
+      data.forEach(item => {
+        html += \`
+          <p>
+            <strong>Ingredient:</strong> \${item.ingredient}<br>
+            <strong>Supplier:</strong> \${item.supplier_name}<br>
+            <strong>Supplier Lot:</strong> \${item.supplier_lot}<br>
+            <strong>Grove Location:</strong> \${item.grove_location}<br>
+            <strong>Production Date:</strong> \${item.production_date}
+          </p>
+          <hr>
+        \`;
+      });
+
+      resultsDiv.innerHTML = html;
+    }
+  </script>
+
+</body>
+</html>
+`;
+
 const server = http.createServer(async (req, res) => {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
   const query = parsedUrl.query;
 
-  /* ------------------ HEALTH ------------------ */
+  /* HEALTH CHECK */
   if (pathname === "/health") {
     res.writeHead(200, { "Content-Type": "text/plain" });
     return res.end("OK");
   }
 
-  /* ------------------ ROOT ------------------ */
+  /* ROOT PAGE */
   if (pathname === "/") {
-    try {
-      const result = await pool.query("SELECT NOW()");
-      res.writeHead(200, { "Content-Type": "text/plain" });
-      return res.end("Database connected. Time: " + result.rows[0].now);
-    } catch (err) {
-      res.writeHead(500);
-      return res.end("Database connection failed");
-    }
+    res.writeHead(200, { "Content-Type": "text/html" });
+    return res.end(htmlPage);
   }
 
-  /* ------------------ TRACE ------------------ */
+  /* TRACE ENGINE */
   if (pathname === "/trace") {
     const { product, code } = query;
 
     if (!product || !code) {
       res.writeHead(400);
-      return res.end("Missing product or code");
+      return res.end(JSON.stringify([]));
     }
 
     try {
-      // Expect format: L1T5 2/26/26
       const parts = code.trim().split(" ");
       if (parts.length !== 2) {
         res.writeHead(400);
-        return res.end("Invalid code format");
+        return res.end(JSON.stringify([]));
       }
 
       const ltPart = parts[0];
@@ -59,7 +132,6 @@ const server = http.createServer(async (req, res) => {
       const year = "20" + yearShort;
       const expirationDate = new Date(`${year}-${month}-${day}`);
 
-      // Get SKU shelf life
       const skuResult = await pool.query(
         "SELECT id, shelf_life_days FROM sku WHERE name = $1",
         [product]
@@ -67,20 +139,18 @@ const server = http.createServer(async (req, res) => {
 
       if (skuResult.rows.length === 0) {
         res.writeHead(404);
-        return res.end("Product not found");
+        return res.end(JSON.stringify([]));
       }
 
       const skuId = skuResult.rows[0].id;
       const shelfLife = skuResult.rows[0].shelf_life_days;
 
-      // Calculate production date
       const productionDate = new Date(expirationDate);
       productionDate.setDate(productionDate.getDate() - shelfLife);
       const productionDateString = productionDate.toISOString().split("T")[0];
 
-      // Query tank + fruit
       const result = await pool.query(
-        `
+        \`
         SELECT 
           s.name AS product,
           tb.production_date,
@@ -97,7 +167,7 @@ const server = http.createServer(async (req, res) => {
         AND tb.production_date = $2
         AND tb.line = $3
         AND tb.tank_number = $4
-        `,
+        \`,
         [skuId, productionDateString, line, tank]
       );
 
@@ -107,11 +177,10 @@ const server = http.createServer(async (req, res) => {
     } catch (err) {
       console.error(err);
       res.writeHead(500);
-      return res.end("Trace failed");
+      return res.end(JSON.stringify([]));
     }
   }
 
-  /* ------------------ DEFAULT ------------------ */
   res.writeHead(404);
   res.end("Not Found");
 });
