@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Juice Trace Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      padding: 40px;
+    }
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      max-width: 600px;
+      margin: auto;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    input {
+      padding: 10px;
+      width: 70%;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px 15px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f0f8ff;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>Trace Your Bottle</h2>
+  <p>Enter your code date:</p>
+  <input type="text" id="codeInput" placeholder="Example: KJ0210A-1234">
+  <button onclick="traceCode()">Trace</button>
+
+  <div id="result" class="result" style="display:none;"></div>
+</div>
+
+<script>
+function traceCode() {
+  const code = document.getElementById("codeInput").value;
+  const resultDiv = document.getElementById("result");
+
+  if(code === "KJ0210A-1234") {
+    resultDiv.innerHTML = `
+      <strong>Production Date:</strong> February 10, 2026<br>
+      <strong>Facility:</strong> Pompano Beach Plant<br>
+      <strong>Groves Used:</strong><br>
+      - Sunrise Grove (Hendry County, FL) – 60%<br>
+      - Riverbend Grove (Polk County, FL) – 40%
+    `;
+  } else {
+    resultDiv.innerHTML = "Code not found in demo system.";
+  }
+
+  resultDiv.style.display = "block";
+}
+</script>
+
+</body>
+</html>
