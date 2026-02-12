@@ -1,0 +1,11 @@
+{
+  "name": "juice-trace-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "npx serve -l 80 ."
+  },
+  "dependencies": {
+    "serve": "^14.2.0"
+  }
+}
