@@ -8,18 +8,12 @@
       padding: 40px;
       background: #f5f5f5;
     }
-
-    input, button {
+    select, input, button {
       padding: 10px;
       margin: 5px 0;
       width: 300px;
       font-size: 16px;
     }
-
-    button {
-      cursor: pointer;
-    }
-
     #results {
       margin-top: 20px;
       padding: 20px;
@@ -32,24 +26,45 @@
 
   <h1>Juice Trace System</h1>
 
-  <input type="text" id="product" placeholder="Product (Example: Orange Juice)">
+  <select id="productSelect">
+    <option>Loading products...</option>
+  </select>
   <br>
+
   <input type="text" id="code" placeholder="Code (Example: L1T5 2/26/26)">
   <br>
+
   <button onclick="trace()">Trace</button>
 
   <div id="results"></div>
 
   <script>
+    const API = "https://juice-trace-app-production.up.railway.app";
+
+    async function loadProducts() {
+      const response = await fetch(API + "/products");
+      const products = await response.json();
+
+      const select = document.getElementById("productSelect");
+      select.innerHTML = "";
+
+      products.forEach(p => {
+        const option = document.createElement("option");
+        option.value = p.name;
+        option.textContent = p.name;
+        select.appendChild(option);
+      });
+    }
+
     async function trace() {
-      const product = document.getElementById("product").value;
+      const product = document.getElementById("productSelect").value;
       const code = document.getElementById("code").value;
 
       const response = await fetch(
-        "https://juice-trace-app-production.up.railway.app/trace?product="
-        + encodeURIComponent(product)
-        + "&code="
-        + encodeURIComponent(code)
+        API + "/trace?product=" +
+        encodeURIComponent(product) +
+        "&code=" +
+        encodeURIComponent(code)
       );
 
       const data = await response.json();
@@ -68,8 +83,7 @@
             <strong>Ingredient:</strong> ${item.ingredient}<br>
             <strong>Supplier:</strong> ${item.supplier_name}<br>
             <strong>Supplier Lot:</strong> ${item.supplier_lot}<br>
-            <strong>Grove Location:</strong> ${item.grove_location}<br>
-            <strong>Production Date:</strong> ${item.production_date}
+            <strong>Grove Location:</strong> ${item.grove_location}
           </p>
           <hr>
         `;
@@ -77,6 +91,8 @@
 
       resultsDiv.innerHTML = html;
     }
+
+    loadProducts();
   </script>
 
 </body>
