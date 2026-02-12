@@ -4,35 +4,15 @@ const { Pool } = require("pg");
 
 const PORT = process.env.PORT;
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
-
 const htmlPage = `
 <!DOCTYPE html>
 <html>
 <head>
   <title>Juice Trace</title>
   <style>
-    body {
-      font-family: Arial;
-      padding: 40px;
-      background: #f5f5f5;
-    }
-    input, button {
-      padding: 10px;
-      margin: 5px 0;
-      width: 300px;
-      font-size: 16px;
-    }
-    button { cursor: pointer; }
-    #results {
-      margin-top: 20px;
-      padding: 20px;
-      background: white;
-      border-radius: 6px;
-    }
+    body { font-family: Arial; padding: 40px; background: #f5f5f5; }
+    input, button { padding: 10px; margin: 5px 0; width: 300px; font-size: 16px; }
+    #results { margin-top: 20px; padding: 20px; background: white; border-radius: 6px; }
   </style>
 </head>
 <body>
@@ -58,10 +38,9 @@ const htmlPage = `
       );
 
       const data = await response.json();
-
       const resultsDiv = document.getElementById("results");
 
-      if (data.length === 0) {
+      if (!data || data.length === 0) {
         resultsDiv.innerHTML = "<strong>No results found.</strong>";
         return;
       }
@@ -69,16 +48,16 @@ const htmlPage = `
       let html = "<h3>Trace Results:</h3>";
 
       data.forEach(item => {
-        html += \`
+        html += `
           <p>
-            <strong>Ingredient:</strong> \${item.ingredient}<br>
-            <strong>Supplier:</strong> \${item.supplier_name}<br>
-            <strong>Supplier Lot:</strong> \${item.supplier_lot}<br>
-            <strong>Grove Location:</strong> \${item.grove_location}<br>
-            <strong>Production Date:</strong> \${item.production_date}
+            <strong>Ingredient:</strong> ${item.ingredient}<br>
+            <strong>Supplier:</strong> ${item.supplier_name}<br>
+            <strong>Supplier Lot:</strong> ${item.supplier_lot}<br>
+            <strong>Grove Location:</strong> ${item.grove_location}<br>
+            <strong>Production Date:</strong> ${item.production_date}
           </p>
           <hr>
-        \`;
+        `;
       });
 
       resultsDiv.innerHTML = html;
@@ -94,19 +73,19 @@ const server = http.createServer(async (req, res) => {
   const pathname = parsedUrl.pathname;
   const query = parsedUrl.query;
 
-  /* HEALTH CHECK */
+  // HEALTH — no DB calls
   if (pathname === "/health") {
     res.writeHead(200, { "Content-Type": "text/plain" });
     return res.end("OK");
   }
 
-  /* ROOT PAGE */
+  // ROOT — no DB calls
   if (pathname === "/") {
     res.writeHead(200, { "Content-Type": "text/html" });
     return res.end(htmlPage);
   }
 
-  /* TRACE ENGINE */
+  // TRACE — DB only here
   if (pathname === "/trace") {
     const { product, code } = query;
 
@@ -116,12 +95,12 @@ const server = http.createServer(async (req, res) => {
     }
 
     try {
-      const parts = code.trim().split(" ");
-      if (parts.length !== 2) {
-        res.writeHead(400);
-        return res.end(JSON.stringify([]));
-      }
+      const pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false }
+      });
 
+      const parts = code.trim().split(" ");
       const ltPart = parts[0];
       const datePart = parts[1];
 
@@ -150,7 +129,7 @@ const server = http.createServer(async (req, res) => {
       const productionDateString = productionDate.toISOString().split("T")[0];
 
       const result = await pool.query(
-        \`
+        `
         SELECT 
           s.name AS product,
           tb.production_date,
@@ -167,7 +146,7 @@ const server = http.createServer(async (req, res) => {
         AND tb.production_date = $2
         AND tb.line = $3
         AND tb.tank_number = $4
-        \`,
+        `,
         [skuId, productionDateString, line, tank]
       );
 
