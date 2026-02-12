@@ -1,8 +1,3 @@
-
-
-const express = require("express");
-const { Pool } = require("pg");
-
 const app = express();
 
 const pool = new Pool({
@@ -12,7 +7,6 @@ const pool = new Pool({
 
 app.get("/", async (req, res) => {
   try {
-    // Simple test query
     const result = await pool.query("SELECT NOW()");
     res.send("Database connected. Time: " + result.rows[0].now);
   } catch (err) {
@@ -20,47 +14,41 @@ app.get("/", async (req, res) => {
     res.status(500).send("Database connection failed");
   }
 });
-app.get("/setup", async (req, res) => {
+
+app.get("/trace", async (req, res) => {
+  const { product, date } = req.query;
+
   try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS sku (
-        id SERIAL PRIMARY KEY,
-        name TEXT,
-        size TEXT,
-        shelf_life_days INTEGER
-      );
-    `);
+    const result = await pool.query(
+      `
+      SELECT 
+        s.name AS product,
+        tb.production_date,
+        tb.line,
+        tb.tank_number,
+        ti.ingredient,
+        ti.supplier_name,
+        ti.supplier_lot,
+        ti.grove_location
+      FROM sku s
+      JOIN tank_batch tb ON tb.sku_id = s.id
+      JOIN tank_input ti ON ti.tank_batch_id = tb.id
+      WHERE s.name = $1
+      AND tb.production_date = $2
+      `,
+      [product, date]
+    );
 
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS tank_batch (
-        id SERIAL PRIMARY KEY,
-        sku_id INTEGER REFERENCES sku(id),
-        production_date DATE,
-        line INTEGER,
-        tank_number INTEGER
-      );
-    `);
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS tank_input (
-        id SERIAL PRIMARY KEY,
-        tank_batch_id INTEGER REFERENCES tank_batch(id),
-        supplier_name TEXT,
-        supplier_lot TEXT,
-        ingredient TEXT,
-        grove_location TEXT
-      );
-    `);
-
-    res.send("Tables created");
+    res.json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).send("Setup failed");
+    res.status(500).send("Trace failed");
   }
 });
 
 const PORT = process.env.PORT || 8080;
 
-app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
-});
+app.listen(PORT, "0.0.0.0", () => {
+  console.log("Server running on port", PORT); });
+
+
