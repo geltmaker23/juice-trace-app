@@ -27,6 +27,25 @@ const server = http.createServer(async (req, res) => {
     return res.end("Juice Trace Server Running");
   }
 
+  // PRODUCTS LIST
+  if (pathname === "/products") {
+    try {
+      const pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false }
+      });
+
+      const result = await pool.query("SELECT name FROM sku ORDER BY name");
+
+      res.writeHead(200, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify(result.rows));
+
+    } catch (err) {
+      res.writeHead(500);
+      return res.end(JSON.stringify([]));
+    }
+  }
+  
   // TRACE
   if (pathname === "/trace") {
     const { product, code } = query;
