@@ -6,7 +6,7 @@ const PORT = process.env.PORT;
 
 const server = http.createServer(async (req, res) => {
 
-  // CORS HEADERS
+  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -15,7 +15,7 @@ const server = http.createServer(async (req, res) => {
   const pathname = parsedUrl.pathname;
   const query = parsedUrl.query;
 
-  // HEALTH
+  // HEALTH CHECK
   if (pathname === "/health") {
     res.writeHead(200, { "Content-Type": "text/plain" });
     return res.end("OK");
@@ -35,7 +35,9 @@ const server = http.createServer(async (req, res) => {
         ssl: { rejectUnauthorized: false }
       });
 
-      const result = await pool.query("SELECT name FROM sku ORDER BY name");
+      const result = await pool.query(
+        "SELECT name FROM sku ORDER BY name"
+      );
 
       res.writeHead(200, { "Content-Type": "application/json" });
       return res.end(JSON.stringify(result.rows));
@@ -45,8 +47,8 @@ const server = http.createServer(async (req, res) => {
       return res.end(JSON.stringify([]));
     }
   }
-  
-  // TRACE
+
+  // TRACE ENGINE
   if (pathname === "/trace") {
     const { product, code } = query;
 
@@ -62,6 +64,11 @@ const server = http.createServer(async (req, res) => {
       });
 
       const parts = code.trim().split(" ");
+      if (parts.length !== 2) {
+        res.writeHead(400);
+        return res.end(JSON.stringify([]));
+      }
+
       const ltPart = parts[0];
       const datePart = parts[1];
 
@@ -92,10 +99,6 @@ const server = http.createServer(async (req, res) => {
       const result = await pool.query(
         `
         SELECT 
-          s.name AS product,
-          tb.production_date,
-          tb.line,
-          tb.tank_number,
           ti.ingredient,
           ti.supplier_name,
           ti.supplier_lot,
