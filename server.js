@@ -1,17 +1,26 @@
 const express = require("express");
+const { Pool } = require("pg");
 
 const app = express();
 
-// Basic health check route
-app.get("/", (req, res) => {
-  res.status(200).send("Juice Trace API Running");
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
 });
 
-// Railway requires listening on process.env.PORT
-const PORT = process.env.PORT || 3000;
+app.get("/", async (req, res) => {
+  try {
+    // Simple test query
+    const result = await pool.query("SELECT NOW()");
+    res.send("Database connected. Time: " + result.rows[0].now);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Database connection failed");
+  }
+});
 
-// IMPORTANT: Do not bind to 127.0.0.1
+const PORT = process.env.PORT || 8080;
+
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log("Server running on port", PORT);
 });
-
