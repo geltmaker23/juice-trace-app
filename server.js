@@ -6,21 +6,36 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+/*
+  IMPORTANT:
+  Railway assigns the correct runtime port.
+  We MUST listen only on process.env.PORT.
+*/
+const PORT = process.env.PORT;
+
+// PostgreSQL connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 
+/* ------------------ HEALTH CHECK ------------------ */
+app.get("/health", (req, res) => {
+  res.status(200).send("OK");
+});
+
+/* ------------------ ROOT ------------------ */
 app.get("/", async (req, res) => {
   try {
     const result = await pool.query("SELECT NOW()");
-    res.send("Database connected. Time: " + result.rows[0].now);
+    res.status(200).send("Database connected. Time: " + result.rows[0].now);
   } catch (err) {
     console.error(err);
     res.status(500).send("Database connection failed");
   }
 });
 
+/* ------------------ TRACE ------------------ */
 app.get("/trace", async (req, res) => {
   const { product, date } = req.query;
 
@@ -52,9 +67,7 @@ app.get("/trace", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT;
-
-app.listen(PORT, "0.0.0.0", () => {
+/* ------------------ START SERVER ------------------ */
+app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
-
