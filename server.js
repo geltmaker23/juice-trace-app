@@ -1,10 +1,9 @@
 const http = require("http");
 const url = require("url");
-const { Pool } = require("pg");
 
 const PORT = process.env.PORT;
 
-const server = http.createServer(async (req, res) => {
+const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
 
