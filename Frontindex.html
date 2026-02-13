@@ -1,99 +1,150 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>What Groves are in your Bottle?</title>
+  <title>What Grove Is Your Juice Made With? | Kennesaw</title>
   <style>
     body {
-      font-family: Arial;
+      font-family: Arial, sans-serif;
       padding: 40px;
       background: #f5f5f5;
+      display: flex;
+      justify-content: center;
     }
+
+    .container {
+      background: white;
+      padding: 40px;
+      border-radius: 10px;
+      width: 420px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    img {
+      width: 180px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 25px;
+    }
+
     select, input, button {
-      padding: 10px;
-      margin: 5px 0;
-      width: 300px;
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
       font-size: 16px;
     }
+
+    button {
+      background-color: #f26522;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background-color: #d9531e;
+    }
+
     #results {
       margin-top: 20px;
-      padding: 20px;
-      background: white;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    .result-box {
+      background: #fafafa;
+      padding: 15px;
       border-radius: 6px;
+      margin-bottom: 10px;
+      border-left: 4px solid #f26522;
     }
   </style>
 </head>
 <body>
 
-  <h1>What Groves are in this Bottle?</h1>
-<p>Enter the code on your bottle to discover some of the Florida groves inside your juice.</p>
+<div class="container">
+
+  <!-- Replace the src below with your actual logo file -->
+  <img src="kennesaw-logo.png" alt="Kennesaw Logo">
+
+  <h1>What Grove Is Your Juice Made With?</h1>
+  <p>Enter the code on your bottle to discover the Florida grove behind your juice.</p>
+
   <select id="productSelect">
     <option>Loading products...</option>
   </select>
-  <br>
 
-  <input type="text" id="code" placeholder="Code (Example: L1T5 2/26/26)">
-  <br>
+  <input type="text" id="code" placeholder="Example: L1T5 2/22/26">
 
- <button onclick="trace()">Find The Groves Now</button>
+  <button onclick="trace()">Find Groves Now</button>
 
   <div id="results"></div>
 
-  <script>
-    const API = "https://juice-trace-app-production.up.railway.app";
+</div>
 
-    async function loadProducts() {
-      const response = await fetch(API + "/products");
-      const products = await response.json();
+<script>
+const API = "https://juice-trace-app-production.up.railway.app";
 
-      const select = document.getElementById("productSelect");
-      select.innerHTML = "";
+async function loadProducts() {
+  const response = await fetch(API + "/products");
+  const products = await response.json();
 
-      products.forEach(p => {
-        const option = document.createElement("option");
-        option.value = p.name;
-        option.textContent = p.name;
-        select.appendChild(option);
-      });
-    }
+  const select = document.getElementById("productSelect");
+  select.innerHTML = "";
 
-    async function trace() {
-      const product = document.getElementById("productSelect").value;
-      const code = document.getElementById("code").value;
+  products.forEach(p => {
+    const option = document.createElement("option");
+    option.value = p.name;
+    option.textContent = p.name;
+    select.appendChild(option);
+  });
+}
 
-      const response = await fetch(
-        API + "/trace?product=" +
-        encodeURIComponent(product) +
-        "&code=" +
-        encodeURIComponent(code)
-      );
+async function trace() {
+  const product = document.getElementById("productSelect").value;
+  const code = document.getElementById("code").value;
 
-      const data = await response.json();
-      const resultsDiv = document.getElementById("results");
+  const response = await fetch(
+    API + "/trace?product=" +
+    encodeURIComponent(product) +
+    "&code=" +
+    encodeURIComponent(code)
+  );
 
-      if (!data || data.length === 0) {
-        resultsDiv.innerHTML = "<strong>No results found.</strong>";
-        return;
-      }
+  const data = await response.json();
+  const resultsDiv = document.getElementById("results");
 
-     let html = "<h3>Your Juice Was Made With Fruit From:</h3>";
+  if (!data || data.length === 0) {
+    resultsDiv.innerHTML = "<p>No sourcing information found for this code.</p>";
+    return;
+  }
 
-      data.forEach(item => {
-        html += `
-          <p>
-            <strong>Ingredient:</strong> ${item.ingredient}<br>
-            <strong>Supplier:</strong> ${item.supplier_name}<br>
-            <strong>Supplier Lot:</strong> ${item.supplier_lot}<br>
-            <strong>Grove Location:</strong> ${item.grove_location}
-          </p>
-          <hr>
-        `;
-      });
+  let html = "<h3>Your Juice Was Made With Fruit From:</h3>";
 
-      resultsDiv.innerHTML = html;
-    }
+  data.forEach(item => {
+    html += `
+      <div class="result-box">
+        <strong>Type of Fruit:</strong> ${item.ingredient}<br>
+        <strong>Grove Name:</strong> ${item.supplier_lot}<br>
+        <strong>Grove Location:</strong> ${item.grove_location}
+      </div>
+    `;
+  });
 
-    loadProducts();
-  </script>
+  resultsDiv.innerHTML = html;
+}
+
+loadProducts();
+</script>
 
 </body>
 </html>
